@@ -1,0 +1,7 @@
+indexes:
+- kind: BookData
+  properties:
+  - name: id
+  - name: start
+  - name: modified
+    direction: desc

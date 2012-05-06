@@ -6,12 +6,12 @@ import org.json.JSONObject;
 public class Book {
 	String title;
 	int size;
-	
+	String id;
 
 	public Book(JSONObject obj) throws JSONException {
-		title = (String)obj.get("title");
-		size = (int)obj.getInt("size");
-		
+		title = obj.getString("title");
+		size = obj.getInt("size");
+		id = obj.getString("id");
 	}
 	
 	public String toString() {

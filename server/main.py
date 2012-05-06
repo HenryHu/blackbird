@@ -1,17 +1,28 @@
 from google.appengine.ext import webapp
+from google.appengine.ext import blobstore
 from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.api.images import resize
 from google.appengine.api import memcache
 from google.appengine.api import mail
+from google.appengine.api import users
+from google.appengine.api import files
+import base64
 import traceback
 import json
 import datetime
-from models import Tweet
+from models import *
 import urllib
 import urllib2
 import random
+import json
+import string
+import datetime
 
-search_url = "http://search.twitter.com/search.json?%s"
+random_chars = string.ascii_lowercase + string.digits
+
+
+def get_random_str(length = 16):
+    return ''.join(random.choice(random_chars) for x in range(length))
 
 class MainPage(webapp.RequestHandler):
     def get(self):
@@ -35,20 +46,109 @@ class MainPage(webapp.RequestHandler):
                                 </html>
                                 ''' % (str(time)))
 
+def find_book(id):
+    books = Book.all()
+    books.filter('id = ', id)
+    for book in books:
+        return book
+    return None
+
 class BookReq(webapp.RequestHandler):
     def get(self, op):
+        user = users.get_current_user()
         if (op == "list"):
-            self.response.out.write('[{"title": "book title 1", "size" : 1024}]')
+            books = Book.all()
+            books.filter('owner = ', user)
+            self.response.out.write('[')
+            first = True
+            for book in books:
+                if not first:
+                    self.response.out.write(',')
+                first = False
+                ret_book = {}
+                ret_book["title"] = book.title
+                ret_book["size"] = book.size
+                ret_book["id"] = book.id
+                ret_book["owner"] = book.owner.user_id()
+                self.response.out.write(json.dumps(ret_book))
+            self.response.out.write(']')
+        elif (op == "get"):
+            bookid = self.request.get("id")
+            start = int(self.request.get("start"))
+            end = int(self.request.get("end"))
+            for book in Book.all().filter('id = ', bookid):
+                if (book.owner != user):
+                    self.response.out.write('{"error":"forbidden"}')
+                    return
+                if (end > book.size):
+                    end = book.size
+                self.response.headers['Content-Type'] = 'application/octet-stream'
+                blocks = BookData.all().filter('id = ', bookid)
+                blocks.filter('start < ', end)
+                blocks.order('start')
+                blocks.order('-modified')
+                cur_pos = start
+                ret = ""
+                for block in blocks:
+                    if (block.end > start):
+                        if (block.start <= cur_pos and block.end > cur_pos):
+                            cur_end = 0
+                            if (end < block.end):
+                                cur_end = end
+                            else:
+                                cur_end = block.end
+                            ret += block.data[cur_pos - block.start : cur_end - block.start]
+                            cur_pos = cur_end
+                self.response.out.write(base64.b64encode(ret))
 
-class ImageReq(webapp.RequestHandler):
-    def get(self, id):
-        self.response.headers['Content-Type'] = 'image/png'
-        tweets = Tweet.all()
-        tweets.filter('id =', int(id))
-        tweets = tweets.fetch(1)
-        for tweet in tweets:
-            self.response.out.write(tweet.user_img_resized)
-            return
+    def post(self, op):
+        user = users.get_current_user()
+        if (op == "add"):
+            book_title = self.request.get("title")
+            book_size = int(self.request.get("size"))
+
+            bookid = get_random_str()
+            while (find_book(bookid) != None):
+                bookid = get_random_str()
+            newbook = Book(id = bookid,
+                           title = book_title,
+                           size = book_size,
+                           owner = user,
+                           created = datetime.datetime.now())
+            newbook.put()
+            
+            book_info = {}
+            book_info["id"] = bookid
+            self.response.out.write(json.dumps(book_info))
+        elif (op == "put"):
+            bookid = self.request.get("id")
+            start = int(self.request.get("start"))
+            end = int(self.request.get("end"))
+            data = str(self.request.get("data"))
+
+            for book in Book.all().filter('id = ', bookid):
+                if (book.owner != user):
+                    self.response.out.write('{"error":"forbidden"}')
+                    return
+                if (end > book.size):
+                    end = book.size
+                bookdata = BookData(id = bookid,
+                                    start = start,
+                                    end = end,
+                                    data = base64.b64decode(data))
+                bookdata.put()
+            self.response.out.write('{"result":"ok"}')
+        elif (op == "del"):
+            bookid = self.request.get("id")
+            for book in Book.all().filter('id = ', bookid):
+                if (book.owner != user):
+                    self.response.out.write('{"error":"forbidden"}')
+                    return
+                book.delete()
+            for block in BookData.all().filter('id = ', bookid):
+                block.delete()
+
+            self.response.out.write('{"result":"ok"}')
 
 class QueryPage(webapp.RequestHandler):
     def post(self):
@@ -133,7 +233,7 @@ class QueryPage(webapp.RequestHandler):
             self.response.out.write(traceback.format_exc().replace('\n', '<br/>'))
 
 application = webapp.WSGIApplication(
-    [('/', MainPage), ('/query', QueryPage), ('/img/(.*)', ImageReq), ('/book/(.*)', BookReq)], debug = True)
+    [('/', MainPage), ('/query', QueryPage), ('/book/(.*)', BookReq)], debug = True)
 
 def main():
     run_wsgi_app(application)

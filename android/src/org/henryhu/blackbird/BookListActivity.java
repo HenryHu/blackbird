@@ -8,11 +8,15 @@ import java.util.List;
 import java.util.concurrent.Semaphore;
 
 import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.cookie.Cookie;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.cookie.BasicClientCookie;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.HttpParams;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -21,11 +25,19 @@ import org.json.JSONTokener;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Base64;
 import android.util.Log;
+import android.view.ContextMenu;
+import android.view.ContextMenu.ContextMenuInfo;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.widget.AdapterView;
+import android.widget.AdapterView.AdapterContextMenuInfo;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListAdapter;
@@ -35,6 +47,8 @@ import android.widget.Toast;
 
 public class BookListActivity extends Activity {
 	SharedPreferences prefs;
+	final int ACTIVITY_CHOOSE_BOOK = 1;
+	final int DELETE_ID = 1;
     DefaultHttpClient http_client = new DefaultHttpClient();
     Button addBook;
     Button refreshBook;
@@ -67,9 +81,10 @@ public class BookListActivity extends Activity {
 
 			@Override
 			public void onClick(View arg0) {
-				// TODO Auto-generated method stub
-	        	new AuthenticatedRequestTask().execute(Network.svr_url);
-				
+				Intent chooseFile = new Intent(Intent.ACTION_GET_CONTENT);
+				chooseFile.setType("file/*");
+				Intent intent = Intent.createChooser(chooseFile, "Choose a book");
+				startActivityForResult(intent, ACTIVITY_CHOOSE_BOOK);
 			}
         });
         
@@ -85,33 +100,51 @@ public class BookListActivity extends Activity {
         bookList = (ListView)findViewById(R.id.booklist_books);
         bookListAdapter = new ArrayAdapter<Book>(this, R.layout.booklist_item, bookListStore);
         bookList.setAdapter(bookListAdapter);
+        bookList.setOnItemClickListener(new OnItemClickListener() {
+			@Override
+			public void onItemClick(AdapterView<?> arg0, View arg1, int pos,
+					long id) {
+				Book book = bookListStore.get((int) id);
+				new LoadBookTask().execute(book);
+			}
+        });
+        bookList.setOnCreateContextMenuListener(this);
+        
+        new RefreshBookListTask().execute();
 	}
-    private class AuthenticatedRequestTask extends AsyncTask<String, Object, HttpResponse> {
+	
+	void showMsg(String msg) {
+		Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_LONG);
+	}
+
+    private class DeleteBookTask extends AsyncTask<Object, Object, HttpResponse> {
     	@Override
-    	protected HttpResponse doInBackground(String... urls) {
+    	protected HttpResponse doInBackground(Object... args) {
     		try {
 				idle.acquire();
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-    		return Network.get(http_client, urls[0]);
+    		Book book = (Book)args[0];
+    		List<NameValuePair> params = new ArrayList<NameValuePair>();
+    		params.add(new BasicNameValuePair("id", book.id));
+    		
+    		return Network.post(http_client, Network.bookdel_url, params);
     	}
-
+    	
     	protected void onPostExecute(HttpResponse result) {
+    		String ret = Network.readResponse(result);
     		try {
-    			BufferedReader reader = new BufferedReader(new InputStreamReader(result.getEntity().getContent()));
-    			String line = reader.readLine();
-    			String newline;
-    			while ((newline = reader.readLine()) != null) {
-    				line += newline;
-    			}
-    			Toast.makeText(getApplicationContext(), line, Toast.LENGTH_LONG).show();                          
-    		} catch (IllegalStateException e) {
-    			e.printStackTrace();
-    		} catch (IOException e) {
-    			e.printStackTrace();
-    		}
+				JSONObject retobj = (JSONObject)new JSONTokener(ret).nextValue();
+				if (retobj.has("error")) {
+					showMsg("Delete error: " + retobj.getString("error"));
+				}
+			} catch (JSONException e) {
+				e.printStackTrace();
+				showMsg("Fail to delete book");
+			}
+    		new RefreshBookListTask().execute();
     		idle.release();
     	}
     }
@@ -146,6 +179,77 @@ public class BookListActivity extends Activity {
 				Log.d("BookListActivity", "Exception: " + e.toString());
 				e.printStackTrace();
 			}
+    		idle.release();
+    	}
+    }
+    
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    	switch(requestCode) {
+    	case ACTIVITY_CHOOSE_BOOK: {
+    		if (resultCode == RESULT_OK){
+    			Uri uri = data.getData();
+    			String filePath = uri.getPath();
+    			Intent intent = new Intent(this, UploadBookActivity.class);
+    			intent.putExtra("filepath", filePath);
+    			startActivity(intent);
+    		}
+    	}
+    	}
+    }
+    
+    void deleteBook(long id) {
+    	Book book = bookListStore.get((int)id);
+    	new DeleteBookTask().execute(book);
+    }
+    public void onCreateContextMenu(ContextMenu menu, View v,  
+    		ContextMenuInfo menuInfo) {  
+    	super.onCreateContextMenu(menu, v, menuInfo);  
+    	menu.add(0, DELETE_ID, 0,  "Delete");  
+    }  
+    public boolean onContextItemSelected(MenuItem item) {  
+    	AdapterContextMenuInfo info = (AdapterContextMenuInfo) item.getMenuInfo();  
+    	switch (item.getItemId()) {  
+    	case DELETE_ID:  
+    		deleteBook(info.id);  
+    		return true;  
+    	default:  
+    		return super.onContextItemSelected(item);  
+    	}  
+    }  
+    private class LoadBookTask extends AsyncTask<Object, Object, HttpResponse> {
+    	@Override
+    	protected HttpResponse doInBackground(Object... args) {
+    		try {
+				idle.acquire();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+    		Book book = (Book)args[0];
+    		int book_size = book.size;
+    		
+    		List<NameValuePair> params = new ArrayList<NameValuePair>();
+    		params.add(new BasicNameValuePair("id", book.id));
+    		params.add(new BasicNameValuePair("start", String.valueOf(0)));
+    		params.add(new BasicNameValuePair("end", "50"));
+    		
+    		return Network.get(http_client, Network.bookget_url, params);
+    	}
+    	
+    	protected void onPostExecute(HttpResponse result) {
+    		Log.d("LoadBookTask", "PostExecute()");
+    		String sret = Network.readResponse(result);
+    		if (sret == null) {
+    			Toast.makeText(getApplicationContext(), "fail to read book", 10000);
+    			Log.d("LoadBookTask", "No result");
+    			idle.release();
+    			return;
+    		}
+    		Log.d("LoadBookTask", "Result: " + sret);
+    		byte[] data = Base64.decode(sret, Base64.DEFAULT);
+    		Log.d("LoadBookTask", "Result: " + new String(data));
+   			Toast.makeText(getApplicationContext(), new String(data), Toast.LENGTH_LONG).show();
     		idle.release();
     	}
     }

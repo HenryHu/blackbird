@@ -1,13 +1,17 @@
 from google.appengine.ext import db
+from google.appengine.ext import blobstore
 
-class Tweet(db.Model):
-    id = db.IntegerProperty()
-    text = db.StringProperty(multiline=True)
-    from_user_id = db.StringProperty()
-    from_user = db.StringProperty()
-    from_user_name = db.StringProperty(multiline=True)
-    created_at = db.StringProperty(multiline=True)
-    user_img = db.StringProperty()
-    user_img_resized = db.BlobProperty()
-    result_type = db.StringProperty()
-    query_id = db.IntegerProperty()
+class Book(db.Model):
+    title = db.StringProperty(multiline = True)
+    owner = db.UserProperty()
+    id = db.StringProperty()
+    size = db.IntegerProperty()
+    modified = db.DateTimeProperty(auto_now = True)
+    created = db.DateTimeProperty()
+
+class BookData(db.Model):
+    id = db.StringProperty()
+    start = db.IntegerProperty()
+    end = db.IntegerProperty()
+    data = db.BlobProperty()
+    modified = db.DateTimeProperty(auto_now = True)
