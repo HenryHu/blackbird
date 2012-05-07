@@ -105,7 +105,12 @@ public class BookListActivity extends Activity {
 			public void onItemClick(AdapterView<?> arg0, View arg1, int pos,
 					long id) {
 				Book book = bookListStore.get((int) id);
-				new LoadBookTask().execute(book);
+				
+				Intent intent = new Intent(getApplicationContext(), ReadBookActivity.class);
+				intent.putExtra("book_id", book.id);
+				intent.putExtra("book_title", book.title);
+				intent.putExtra("book_size", book.size);
+				startActivity(intent);
 			}
         });
         bookList.setOnCreateContextMenuListener(this);
@@ -217,40 +222,5 @@ public class BookListActivity extends Activity {
     		return super.onContextItemSelected(item);  
     	}  
     }  
-    private class LoadBookTask extends AsyncTask<Object, Object, HttpResponse> {
-    	@Override
-    	protected HttpResponse doInBackground(Object... args) {
-    		try {
-				idle.acquire();
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-    		Book book = (Book)args[0];
-    		int book_size = book.size;
-    		
-    		List<NameValuePair> params = new ArrayList<NameValuePair>();
-    		params.add(new BasicNameValuePair("id", book.id));
-    		params.add(new BasicNameValuePair("start", String.valueOf(0)));
-    		params.add(new BasicNameValuePair("end", "50"));
-    		
-    		return Network.get(http_client, Network.bookget_url, params);
-    	}
-    	
-    	protected void onPostExecute(HttpResponse result) {
-    		Log.d("LoadBookTask", "PostExecute()");
-    		String sret = Network.readResponse(result);
-    		if (sret == null) {
-    			Toast.makeText(getApplicationContext(), "fail to read book", 10000);
-    			Log.d("LoadBookTask", "No result");
-    			idle.release();
-    			return;
-    		}
-    		Log.d("LoadBookTask", "Result: " + sret);
-    		byte[] data = Base64.decode(sret, Base64.DEFAULT);
-    		Log.d("LoadBookTask", "Result: " + new String(data));
-   			Toast.makeText(getApplicationContext(), new String(data), Toast.LENGTH_LONG).show();
-    		idle.release();
-    	}
-    }
+    
 }

@@ -12,5 +12,8 @@
     <string name="upload_filepath">File:</string>
     <string name="upload_ok">OK</string>
     <string name="upload_cancel">Cancel</string>
+    <string name="read_prev">Prev</string>
+    <string name="read_next">Next</string>
+    <string name="read_jump">Jump to</string>
 
 </resources>

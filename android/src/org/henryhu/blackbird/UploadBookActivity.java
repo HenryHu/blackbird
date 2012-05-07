@@ -7,6 +7,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Semaphore;
@@ -171,6 +172,7 @@ public class UploadBookActivity extends Activity {
     			// TODO Auto-generated catch block
     			e.printStackTrace();
     		}
+
     		String book_data = Base64.encodeToString(data, Base64.DEFAULT);
     		
     		List<NameValuePair> params = new ArrayList<NameValuePair>();

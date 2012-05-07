@@ -21,13 +21,18 @@ public final class R {
         public static final int linearLayout1=0x7f050004;
         public static final int linearLayout2=0x7f050002;
         public static final int login_btn=0x7f050007;
+        public static final int read_jump=0x7f05000b;
+        public static final int read_next=0x7f05000c;
+        public static final int read_prev=0x7f05000a;
+        public static final int read_scroll=0x7f050008;
+        public static final int read_text=0x7f050009;
         public static final int textView1=0x7f050001;
-        public static final int textView2=0x7f050009;
-        public static final int upload_cancel=0x7f05000c;
-        public static final int upload_filepath=0x7f05000a;
-        public static final int upload_ok=0x7f05000b;
-        public static final int upload_status=0x7f05000d;
-        public static final int upload_title=0x7f050008;
+        public static final int textView2=0x7f05000e;
+        public static final int upload_cancel=0x7f050011;
+        public static final int upload_filepath=0x7f05000f;
+        public static final int upload_ok=0x7f050010;
+        public static final int upload_status=0x7f050012;
+        public static final int upload_title=0x7f05000d;
     }
     public static final class layout {
         public static final int account_list_item=0x7f030000;
@@ -35,7 +40,8 @@ public final class R {
         public static final int book_list=0x7f030002;
         public static final int booklist_item=0x7f030003;
         public static final int login=0x7f030004;
-        public static final int upload_book=0x7f030005;
+        public static final int read_book=0x7f030005;
+        public static final int upload_book=0x7f030006;
     }
     public static final class string {
         public static final int app_name=0x7f040001;
@@ -45,6 +51,9 @@ public final class R {
         public static final int hello=0x7f040000;
         public static final int login_btn=0x7f040002;
         public static final int login_welcome=0x7f040003;
+        public static final int read_jump=0x7f04000d;
+        public static final int read_next=0x7f04000c;
+        public static final int read_prev=0x7f04000b;
         public static final int upload_booktitle=0x7f040007;
         public static final int upload_cancel=0x7f04000a;
         public static final int upload_filepath=0x7f040008;
