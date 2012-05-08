@@ -8,6 +8,7 @@ class Book(db.Model):
     size = db.IntegerProperty()
     modified = db.DateTimeProperty(auto_now = True)
     created = db.DateTimeProperty()
+    place = db.IntegerProperty()
 
 class BookData(db.Model):
     id = db.StringProperty()

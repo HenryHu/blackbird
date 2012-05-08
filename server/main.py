@@ -20,6 +20,30 @@ import datetime
 
 random_chars = string.ascii_lowercase + string.digits
 
+class ReportedError(Exception):
+    pass
+
+class MyRequestHandler(webapp.RequestHandler):
+    def report_error(self, msg):
+        self.response.out.write('{"error":"%s"}' % msg)
+
+    def err_forbidden(self):
+        self.report_error("forbidden")
+
+    def get_strarg(self, argname):
+        if (self.request.get(argname) == ""):
+            self.report_error("missing argument %s" % argname)
+            raise ReportedError("missing argument %s" % argname)
+        return self.request.get(argname)
+
+    def get_intarg(self, argname):
+        argval = self.get_strarg(argname)
+        try:
+            iargval = int(argval)
+        except ValueError:
+            self.report_error("invalid format for arg %s" % argname)
+            raise ReportedError("invalid format for arg %s" % argname)
+        return iargval
 
 def get_random_str(length = 16):
     return ''.join(random.choice(random_chars) for x in range(length))
@@ -53,33 +77,45 @@ def find_book(id):
         return book
     return None
 
-class BookReq(webapp.RequestHandler):
+class BookReq(MyRequestHandler):
+    def find_book(self, id):
+        books = Book.all().filter('id = ', id)
+        for book in books:
+            return book
+        self.report_error("no such book")
+        raise ReportedError()
+
+    def find_my_book(self, id):
+        book = self.find_book(id)
+        if (book.owner != users.get_current_user()):
+            self.err_forbidden()
+            raise ReportedError()
+        return book
+
     def get(self, op):
-        user = users.get_current_user()
-        if (op == "list"):
-            books = Book.all()
-            books.filter('owner = ', user)
-            self.response.out.write('[')
-            first = True
-            for book in books:
-                if not first:
-                    self.response.out.write(',')
-                first = False
-                ret_book = {}
-                ret_book["title"] = book.title
-                ret_book["size"] = book.size
-                ret_book["id"] = book.id
-                ret_book["owner"] = book.owner.user_id()
-                self.response.out.write(json.dumps(ret_book))
-            self.response.out.write(']')
-        elif (op == "get"):
-            bookid = self.request.get("id")
-            start = int(self.request.get("start"))
-            end = int(self.request.get("end"))
-            for book in Book.all().filter('id = ', bookid):
-                if (book.owner != user):
-                    self.response.out.write('{"error":"forbidden"}')
-                    return
+        try:
+            user = users.get_current_user()
+            if (op == "list"):
+                books = Book.all()
+                books.filter('owner = ', user)
+                self.response.out.write('[')
+                first = True
+                for book in books:
+                    if not first:
+                        self.response.out.write(',')
+                    first = False
+                    ret_book = {}
+                    ret_book["title"] = book.title
+                    ret_book["size"] = book.size
+                    ret_book["id"] = book.id
+                    ret_book["owner"] = book.owner.user_id()
+                    self.response.out.write(json.dumps(ret_book))
+                self.response.out.write(']')
+            elif (op == "get"):
+                bookid = self.get_strarg("id")
+                start = self.get_intarg("start")
+                end = self.get_intarg("end")
+                book = self.find_my_book(bookid)
                 if (end > book.size):
                     end = book.size
                 self.response.headers['Content-Type'] = 'application/octet-stream'
@@ -100,36 +136,42 @@ class BookReq(webapp.RequestHandler):
                             ret += block.data[cur_pos - block.start : cur_end - block.start]
                             cur_pos = cur_end
                 self.response.out.write(base64.b64encode(ret))
-
+            elif (op == "where"):
+                bookid = self.get_strarg("id")
+                book = self.find_my_book(bookid)
+                pos = book.place
+                self.response.out.write('{"pos":%d}' % pos)
+        except ReportedError:
+            return
+    
     def post(self, op):
-        user = users.get_current_user()
-        if (op == "add"):
-            book_title = self.request.get("title")
-            book_size = int(self.request.get("size"))
-
-            bookid = get_random_str()
-            while (find_book(bookid) != None):
+        try:
+            user = users.get_current_user()
+            if (op == "add"):
+                book_title = self.get_strarg("title")
+                book_size = self.get_intarg("size")
+    
                 bookid = get_random_str()
-            newbook = Book(id = bookid,
-                           title = book_title,
-                           size = book_size,
-                           owner = user,
-                           created = datetime.datetime.now())
-            newbook.put()
-            
-            book_info = {}
-            book_info["id"] = bookid
-            self.response.out.write(json.dumps(book_info))
-        elif (op == "put"):
-            bookid = self.request.get("id")
-            start = int(self.request.get("start"))
-            end = int(self.request.get("end"))
-            data = str(self.request.get("data"))
-
-            for book in Book.all().filter('id = ', bookid):
-                if (book.owner != user):
-                    self.response.out.write('{"error":"forbidden"}')
-                    return
+                while (find_book(bookid) != None):
+                    bookid = get_random_str()
+                newbook = Book(id = bookid,
+                               title = book_title,
+                               size = book_size,
+                               owner = user,
+                               created = datetime.datetime.now(),
+                               place = 0)
+                newbook.put()
+                
+                book_info = {}
+                book_info["id"] = bookid
+                self.response.out.write(json.dumps(book_info))
+            elif (op == "put"):
+                bookid = self.get_strarg("id")
+                start = self.get_intarg("start")
+                end = self.get_intarg("end")
+                data = str(self.get_strarg("data"))
+    
+                book = self.find_my_book(bookid)
                 if (end > book.size):
                     end = book.size
                 bookdata = BookData(id = bookid,
@@ -137,19 +179,26 @@ class BookReq(webapp.RequestHandler):
                                     end = end,
                                     data = base64.b64decode(data))
                 bookdata.put()
-            self.response.out.write('{"result":"ok"}')
-        elif (op == "del"):
-            bookid = self.request.get("id")
-            for book in Book.all().filter('id = ', bookid):
-                if (book.owner != user):
-                    self.response.out.write('{"error":"forbidden"}')
-                    return
+                self.response.out.write('{"result":"ok"}')
+            elif (op == "del"):
+                bookid = self.request.get("id")
+                found = False
+                book = self.find_my_book(bookid)
                 book.delete()
-            for block in BookData.all().filter('id = ', bookid):
-                block.delete()
-
-            self.response.out.write('{"result":"ok"}')
-
+                for block in BookData.all().filter('id = ', bookid):
+                    block.delete()
+    
+                self.response.out.write('{"result":"ok"}')
+            elif (op == "here"):
+                bookid = self.get_strarg("id")
+                pos = self.get_intarg("pos")
+                book = self.find_my_book(bookid)
+                book.place = pos
+                book.put()
+                self.response.out.write('{"result":"ok"}')
+        except ReportedError:
+            return
+    
 class QueryPage(webapp.RequestHandler):
     def post(self):
         try:
