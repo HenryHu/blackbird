@@ -29,6 +29,7 @@ public class Network {
 	static final String bookget_url = svr_url + "book/get";
 	static final String bookput_url = svr_url + "book/put";
 	static final String bookdel_url = svr_url + "book/del";
+    static final String bookhere_url = svr_url + "book/here";
 	static final int block_size = 4096;
 	static HttpResponse post(HttpClient http_client, String url, List<NameValuePair> params) {
 		try {
