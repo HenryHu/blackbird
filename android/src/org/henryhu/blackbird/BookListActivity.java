@@ -92,7 +92,7 @@ public class BookListActivity extends Activity {
         refreshBook.setOnClickListener(new OnClickListener() {
         	@Override
         	public void onClick(View btn) {
-        		new RefreshBookListTask().execute();
+        		refreshBookList();
         	}
         });
         
@@ -110,21 +110,27 @@ public class BookListActivity extends Activity {
 				intent.putExtra("book_id", book.id);
 				intent.putExtra("book_title", book.title);
 				intent.putExtra("book_size", book.size);
+				intent.putExtra("book_place", book.place);
+				Log.d("BookList", "Place: " + String.valueOf(book.place));
 				startActivity(intent);
 			}
         });
         bookList.setOnCreateContextMenuListener(this);
         
-        new RefreshBookListTask().execute();
+//        new RefreshBookListTask().execute();
 	}
 	
 	void showMsg(String msg) {
 		Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_LONG);
 	}
+	
+	void refreshBookList() {
+		new RefreshBookListTask().execute();
+	}
 
-    private class DeleteBookTask extends AsyncTask<Object, Object, HttpResponse> {
+    private class DeleteBookTask extends AsyncTask<Object, Object, String> {
     	@Override
-    	protected HttpResponse doInBackground(Object... args) {
+    	protected String doInBackground(Object... args) {
     		try {
 				idle.acquire();
 			} catch (InterruptedException e) {
@@ -135,11 +141,12 @@ public class BookListActivity extends Activity {
     		List<NameValuePair> params = new ArrayList<NameValuePair>();
     		params.add(new BasicNameValuePair("id", book.id));
     		
-    		return Network.post(http_client, Network.bookdel_url, params);
+    		HttpResponse result = Network.post(http_client, Network.bookdel_url, params);
+    		String ret = Network.readResponse(result);
+    		return ret;
     	}
     	
-    	protected void onPostExecute(HttpResponse result) {
-    		String ret = Network.readResponse(result);
+    	protected void onPostExecute(String ret) {
     		try {
 				JSONObject retobj = (JSONObject)new JSONTokener(ret).nextValue();
 				if (retobj.has("error")) {
@@ -153,20 +160,21 @@ public class BookListActivity extends Activity {
     		idle.release();
     	}
     }
-    private class RefreshBookListTask extends AsyncTask<String, Object, HttpResponse> {
+    private class RefreshBookListTask extends AsyncTask<String, Object, String> {
     	@Override
-    	protected HttpResponse doInBackground(String... urls) {
+    	protected String doInBackground(String... urls) {
     		try {
 				idle.acquire();
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-    		return Network.get(http_client, Network.booklist_url);
+    		HttpResponse result = Network.get(http_client, Network.booklist_url);
+    		String sret = Network.readResponse(result);
+    		return sret;
     	}
     	
-    	protected void onPostExecute(HttpResponse result) {
-    		String sret = Network.readResponse(result);
+    	protected void onPostExecute(String sret) {
     		if (sret == null) {
     			idle.release();
     			return;
@@ -222,5 +230,10 @@ public class BookListActivity extends Activity {
     		return super.onContextItemSelected(item);  
     	}  
     }  
+    
+    protected void onResume() {
+    	super.onResume();
+    	refreshBookList();
+    }
     
 }

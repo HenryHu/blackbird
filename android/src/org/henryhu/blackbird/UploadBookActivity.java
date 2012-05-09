@@ -82,12 +82,13 @@ public class UploadBookActivity extends Activity {
 
 	}
 	// arg: book name, book size
-    private class AddBookTask extends AsyncTask<Object, Object, HttpResponse> {
+    private class AddBookTask extends AsyncTask<Object, Object, String> {
     	String book_path;
     	int book_size;
+    	String statusline;
     	
     	@Override
-    	protected HttpResponse doInBackground(Object... args) {
+    	protected String doInBackground(Object... args) {
     		String book_title = (String)args[0];
     		book_path = (String)args[1];
     		try {
@@ -103,17 +104,19 @@ public class UploadBookActivity extends Activity {
     		params.add(new BasicNameValuePair("title", book_title));
     		params.add(new BasicNameValuePair("size", String.valueOf(book_size)));
     		
-    		return Network.post(http_client, Network.bookadd_url, params);
+    		HttpResponse result = Network.post(http_client, Network.bookadd_url, params);
+			String ret = Network.readResponse(result);
+			statusline = result.getStatusLine().toString();
+			return ret;
     	}
     	
     	protected void onPreExecute() {
     		setStatus("uploading book....");
     	}
 
-    	protected void onPostExecute(HttpResponse result) {
+    	protected void onPostExecute(String ret) {
     		JSONObject retobj = null;
     		try {
-    			String ret = Network.readResponse(result);
     			retobj = (JSONObject) new JSONTokener(ret).nextValue();
     			String book_id = retobj.getString("id");
     			setStatus("uploading book data....");
@@ -121,17 +124,17 @@ public class UploadBookActivity extends Activity {
     			new UploadBookDataTask().execute(book_path, book_id, 0, book_size);
     		} catch (IllegalStateException e) {
     			e.printStackTrace();
-				setStatus("Fail to upload book: " + result.getStatusLine().toString());
+				setStatus("Fail to upload book: " + statusline);
     		} catch (JSONException e) {
 				e.printStackTrace();
 				if (retobj == null)
-					setStatus("Fail to upload book: " + result.getStatusLine().toString());
+					setStatus("Fail to upload book: " + statusline);
 				else
 					try {
 						setStatus("Fail to upload: " + retobj.getString("error"));
 					} catch (JSONException e1) {
 						e1.printStackTrace();
-						setStatus("Fail to upload book: " + result.getStatusLine().toString());
+						setStatus("Fail to upload book: " + statusline);
 					}
 			} catch (Exception e) {
 				setStatus("Fali to upload book");

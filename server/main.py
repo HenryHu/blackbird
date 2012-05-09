@@ -17,6 +17,7 @@ import random
 import json
 import string
 import datetime
+import logging
 
 random_chars = string.ascii_lowercase + string.digits
 
@@ -195,6 +196,8 @@ class BookReq(MyRequestHandler):
                 book = self.find_my_book(bookid)
                 book.place = place
                 book.put()
+                logger = logging.getLogger("BookReq")
+                logger.debug("saving book place id: %s place: %d", bookid, place)
                 self.response.out.write('{"result":"ok"}')
         except ReportedError:
             return

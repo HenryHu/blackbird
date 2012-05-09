@@ -35,7 +35,13 @@ public class Network {
 		try {
 			HttpPost http_post = new HttpPost(url);
 			http_post.setEntity(new UrlEncodedFormEntity(params));
-			return http_client.execute(http_post);
+			HttpResponse ret;
+			synchronized(http_client) {
+				Log.d("Network", "locked http_client " + http_client);
+				ret = http_client.execute(http_post);
+				Log.d("Network", "unlocked http_client " + http_client);
+			}
+			return ret;
 		} catch (ClientProtocolException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -51,7 +57,13 @@ public class Network {
 	static HttpResponse get(HttpClient http_client, String url) {
 		try {
 			HttpGet http_get = new HttpGet(url);
-			return http_client.execute(http_get);
+			HttpResponse ret;
+			synchronized(http_client) {
+				Log.d("Network", "locked http_client " + http_client);
+				ret = http_client.execute(http_get);
+				Log.d("Network", "unlocked http_client " + http_client);
+			}
+			return ret;
 		} catch (ClientProtocolException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
