@@ -139,8 +139,8 @@ class BookReq(MyRequestHandler):
             elif (op == "where"):
                 bookid = self.get_strarg("id")
                 book = self.find_my_book(bookid)
-                pos = book.place
-                self.response.out.write('{"pos":%d}' % pos)
+                place = book.place
+                self.response.out.write('{"place":%d}' % place)
         except ReportedError:
             return
     
@@ -182,7 +182,6 @@ class BookReq(MyRequestHandler):
                 self.response.out.write('{"result":"ok"}')
             elif (op == "del"):
                 bookid = self.request.get("id")
-                found = False
                 book = self.find_my_book(bookid)
                 book.delete()
                 for block in BookData.all().filter('id = ', bookid):
@@ -191,9 +190,9 @@ class BookReq(MyRequestHandler):
                 self.response.out.write('{"result":"ok"}')
             elif (op == "here"):
                 bookid = self.get_strarg("id")
-                pos = self.get_intarg("pos")
+                place = self.get_intarg("place")
                 book = self.find_my_book(bookid)
-                book.place = pos
+                book.place = place
                 book.put()
                 self.response.out.write('{"result":"ok"}')
         except ReportedError:
