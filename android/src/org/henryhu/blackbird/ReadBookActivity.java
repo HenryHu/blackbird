@@ -146,6 +146,8 @@ public class ReadBookActivity extends Activity {
 				book_scroll.smoothScrollTo(0,0);
 			} catch (UnsupportedEncodingException e) { }
    			cur_pos = start;
+   			
+   			
     		idle.release();
     	}
     }

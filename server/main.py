@@ -109,6 +109,7 @@ class BookReq(MyRequestHandler):
                     ret_book["size"] = book.size
                     ret_book["id"] = book.id
                     ret_book["owner"] = book.owner.user_id()
+                    ret_book["place"] = book.place
                     self.response.out.write(json.dumps(ret_book))
                 self.response.out.write(']')
             elif (op == "get"):
