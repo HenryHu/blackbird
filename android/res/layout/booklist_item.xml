@@ -1,7 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
-<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:textSize="12pt" >
+    android:layout_height="wrap_content"
+    android:orientation="vertical" >
 
-</TextView>
+    <TextView
+        android:id="@+id/booklist_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Book Title"
+        android:textSize="14pt" />
+
+    <LinearLayout
+        android:id="@+id/linearLayout1"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" >
+
+        <TextView
+            android:id="@+id/booklist_info_left"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="left"
+            android:text="Status Info"
+            android:textSize="10pt" />
+
+        <TextView
+            android:id="@+id/booklist_info_right"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="right"
+            android:gravity="right"
+            android:text="Progress Info"
+            android:textSize="10pt" />
+
+    </LinearLayout>
+
+</LinearLayout>

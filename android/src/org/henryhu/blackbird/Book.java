@@ -8,12 +8,14 @@ public class Book {
 	int size;
 	String id;
     int place;
+    String status;
 
 	public Book(JSONObject obj) throws JSONException {
 		title = obj.getString("title");
 		size = obj.getInt("size");
 		id = obj.getString("id");
         place = obj.getInt("place");
+        status = "";
 	}
 	
 	public Book(String _title, int _size, String _id, int _place) {
@@ -38,6 +40,6 @@ public class Book {
 		if (size == 0)
 			return String.format("%s      empty", title);
 		else
-			return String.format("%s      read: %.2f%%(%s)", title, (double)place / (double)size * 100, formatNum(size));
+			return String.format("%s      %n%.2f%%(%s)   %s", title, (double)place / (double)size * 100, formatNum(size), status);
 	}
 }

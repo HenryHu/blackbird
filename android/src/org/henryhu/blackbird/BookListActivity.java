@@ -23,6 +23,7 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
@@ -32,9 +33,11 @@ import android.util.Base64;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
+import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.AdapterView.OnItemClickListener;
@@ -42,8 +45,42 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListAdapter;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
+class BookListAdapter extends ArrayAdapter<Book> {
+	static class ViewInfo {
+		TextView title;
+		TextView info_left;
+		TextView info_right;
+	}
+	
+	LayoutInflater inflater;
+	@Override
+	public View getView (int position, View convertView, ViewGroup parent) {
+		if (convertView == null) {
+			convertView = inflater.inflate(R.layout.booklist_item, parent, false);
+			ViewInfo vi = new ViewInfo();
+			vi.title = (TextView)convertView.findViewById(R.id.booklist_title);
+			vi.info_left = (TextView)convertView.findViewById(R.id.booklist_info_left);
+			vi.info_right = (TextView)convertView.findViewById(R.id.booklist_info_right);
+			convertView.setTag(vi);
+		}
+		
+		ViewInfo vi = (ViewInfo)convertView.getTag();
+		Book book = getItem(position);
+		vi.title.setText(book.title);
+		vi.info_left.setText(String.format("%s", book.status));
+		vi.info_right.setText(String.format("%.2f%%(%s)", (double)book.place / (double)book.size * 100, book.formatNum(book.size)));
+		return convertView;
+	}
+	
+	public BookListAdapter(Context context, int textViewResourceId, List<Book> objects) {
+		super(context, textViewResourceId, objects);
+		inflater = (LayoutInflater)context.getSystemService
+			      (Context.LAYOUT_INFLATER_SERVICE);
+	}
+}
 
 public class BookListActivity extends Activity {
 	SharedPreferences prefs;
@@ -98,7 +135,7 @@ public class BookListActivity extends Activity {
         
         bookListStore = new ArrayList<Book>();
         bookList = (ListView)findViewById(R.id.booklist_books);
-        bookListAdapter = new ArrayAdapter<Book>(this, R.layout.booklist_item, bookListStore);
+        bookListAdapter = new BookListAdapter(this, R.layout.booklist_item, bookListStore);
         bookList.setAdapter(bookListAdapter);
         bookList.setOnItemClickListener(new OnItemClickListener() {
 			@Override
@@ -195,7 +232,7 @@ public class BookListActivity extends Activity {
     		idle.release();
     	}
     }
-    
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
     	switch(requestCode) {
