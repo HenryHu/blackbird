@@ -53,6 +53,7 @@ public class UploadBookActivity extends Activity {
 		status = (TextView)findViewById(R.id.upload_status);
 		
 		filepath.setText(getIntent().getExtras().getString("filepath"));
+		title.setText(getBasename(getIntent().getExtras().getString("filepath")));
 		
 		prefs = getSharedPreferences("data", 0);
         BasicClientCookie cookie = new BasicClientCookie("SACSID", prefs.getString("SACSID", ""));
@@ -81,6 +82,19 @@ public class UploadBookActivity extends Activity {
         });
 
 	}
+	
+	String getBasename(String path) {
+		int i = path.lastIndexOf('/');
+		if (i >= 0) {
+			path = path.substring(i + 1);
+		}
+		i = path.indexOf('.');
+		if (i >= 0) {
+			path = path.substring(0, i);		
+		}
+		return path;
+	}
+	
 	// arg: book name, book size
     private class AddBookTask extends AsyncTask<Object, Object, String> {
     	String book_path;

@@ -34,7 +34,7 @@ public class Network {
 	static HttpResponse post(HttpClient http_client, String url, List<NameValuePair> params) {
 		try {
 			HttpPost http_post = new HttpPost(url);
-			http_post.setEntity(new UrlEncodedFormEntity(params));
+			http_post.setEntity(new UrlEncodedFormEntity(params, "utf-8"));
 			HttpResponse ret;
 			synchronized(http_client) {
 				Log.d("Network", "locked http_client " + http_client);
