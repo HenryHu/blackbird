@@ -250,6 +250,8 @@ public class BookListActivity extends Activity {
     
     void deleteBook(long id) {
     	Book book = bookListStore.get((int)id);
+    	book.status = "(deleting)";
+    	bookListAdapter.notifyDataSetChanged();
     	new DeleteBookTask().execute(book);
     }
     public void onCreateContextMenu(ContextMenu menu, View v,  
